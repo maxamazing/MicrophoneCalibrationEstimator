@@ -1,0 +1,3 @@
+# MicrophoneCalibrationEstimator
+
+![plot](./workingPrinciple.png)
