@@ -19,3 +19,10 @@ run with
 ```console
 $ ./levelMeterBottle_tool.py exampleSounds/recording1.wav 
 ```
+
+
+
+get help with
+```console
+$ ./levelMeterBottle_tool.py -h
+```
