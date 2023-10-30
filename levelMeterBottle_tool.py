@@ -33,16 +33,19 @@ if __name__ == "__main__":
         add_help=True, formatter_class=argparse.RawDescriptionHelpFormatter, description=descr)
     parser.add_argument("-w", "--widthTimeWindow", nargs="*", default=lm.defaults.widthTimeWindow,
                         help="width of the time window in ms. "
-                        "default={}".format(lm.defaults.widthTimeWindow))
+                        "default={}".format(lm.defaults.widthTimeWindow),
+                        type=float)
     parser.add_argument("-s", "--stepTime", default=lm.defaults.stepTime,
                         help="feed forward step size of time window as multiples of the time"
-                        " window width. Default={}".format(lm.defaults.stepTime))
+                        " window width. Default={}".format(lm.defaults.stepTime),
+                        type=float)
     parser.add_argument("-v", "--verbose", action=boolToText(False),
                         help="show the output results in the terminal"
                         " default= {}".format(False))
     parser.add_argument("-r", "--resonanceWidth", default=lm.defaults.resonanceWidth,
                         help="rectangular width of the considered resonance. "
-                        "default={}Hz".format(lm.defaults.resonanceWidth))
+                        "default={}Hz".format(lm.defaults.resonanceWidth),
+                        type=float)
     parser.add_argument("file", nargs="*",
                         help="required: paths to .wav soundfiles that you want to process.")
     parser.add_argument("-f", "--fullScale", action=boolToText(lm.defaults.fullScale),
@@ -51,7 +54,9 @@ if __name__ == "__main__":
     parser.add_argument("-pr", "--progressBar", action=boolToText(lm.defaults.progressBar),
                         help="display a progressbar. default={}".format(lm.defaults.progressBar))
     parser.add_argument("-fr", "--frequencyRange", nargs=2, default=fRes,
-                        help="permitted frequency range for resonance frequency. default={}".format(fRes))
+                        help="permitted frequency range for resonance frequency. default={}".format(
+                            fRes),
+                        type=float)
     # hide some settings from the user
     args = parser.parse_args()
     args.calibrationOffset = 0

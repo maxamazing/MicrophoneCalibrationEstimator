@@ -11,17 +11,20 @@ from pathlib import Path
 descr = """Custom Levelmeter for calibration of devices with a helmholz resonator
 
 BASE LIB
-
-AUTHOR: max scharf Sa 10. Jul 18:51:41 CEST 2021 maximilian.scharf@uol.de
+calculations reviewed on 
+04.01.2023
+12.10.2023
+ 
+AUTHOR: max scharf Di 24. Okt 14:18:40 CEST 2023 maximilian.scharf_at_uol.de
 """
-__version__ = 1.0
+__version__ = 1.1
 
 
 class defaultSettings:
     widthTimeWindow = [35]  # in ms (35 is the optimum)
     stepTime = 0.5  # feed forward step size of time window as multiples of the time window width
     file = list(Path("./exampleSounds/").glob("*.wav"))
-    target = "./{}.pdf"
+    target = "./tmp/{}.pdf"
     plot = True
     verbose = True
     resonanceWidth = 120  # Hz
@@ -31,7 +34,7 @@ class defaultSettings:
     individual_fLim = [100, 300]  # Hz
     individual_title = "{}"
     exportResults = True  # export to excel
-    fullScale = True  # report in units of full scale
+    fullScale = True  # calculate in units of full scale; caution: if you have a mix of resolutions, calculating in dbFS will cause problems!
     calibrationOffset = 130  # use for calibration
     progressBar = True
 
@@ -85,11 +88,6 @@ def analyze(args=defaults):
     if args.exportResults:
         import pandas as pd
 
-    # are the level in units of dB FS?
-    writeFs = False
-    if (args.fullScale and args.calibrationOffset == 0):
-        writeFs = True
-
     if args.plot and len(args.file) > 0:
         fig, axs = plt.subplots(2)
     else:
@@ -97,6 +95,7 @@ def analyze(args=defaults):
             print("plots are turned off")
 
     levelData = []
+    dataDtypes = []
 
     if len(args.file) == 0:
         raise Exception("no soundfiles found")
@@ -112,6 +111,7 @@ def analyze(args=defaults):
 
                 # fullscaleValue
                 fullScaleMaxVal = np.iinfo(data[0]).max
+                dataDtypes.append(data.dtype)
 
                 # remove DC
                 data = data-np.mean(data)
@@ -125,7 +125,7 @@ def analyze(args=defaults):
                 fResonance = abs(f[np.argmax(powSpec)])
 
                 tStartRange = np.arange(0, len(data)/fs-tWidth, tStep)
-                for tStart in tqdm(tStartRange, desc=os.path.split(file)[1], disable=not args.progressBar):
+                for tStart in tqdm(tStartRange, desc=os.path.split(file)[1], disable=not args.verbose):
                     # apply time window
                     tmpS, filt = applyWin(data, fs, tStart, tWidth)
                     # powerspectrum real->hermitian->consider only pos frequency
@@ -159,10 +159,10 @@ def analyze(args=defaults):
                                    label=os.path.split(file)[1])
                     axs[0].set_title(
                         "considered resonance width={0:2.2f}Hz, "
-                        "Time-window={1:2.3f}s".format(args.resonanceWidth, tWidth))
+                        "Time-window={1:3.1f}ms".format(args.resonanceWidth, tWidth*1000))
                     axs[0].set_xlabel("time /s")
                     axs[0].set_ylabel(
-                        "level /dB{}".format("FS"*writeFs+""))
+                        "level /dB{}".format("FS"*args.fullScale+""))
 
                 levelData.append([Path(file).name, tWidth, max(leveldB),
                                  fResonance, fullScaleMaxVal, leveldB, fs])
@@ -183,11 +183,11 @@ def analyze(args=defaults):
             axs[0].set_ylim(min(lev)-1, max(lev)+1)
 
             axs[1].set_ylabel(
-                "maximum Level /dB{}".format("FS"*writeFs+" "))
+                "maximum Level /dB{}".format("FS"*args.fullScale+" "))
             axs[1].set_xlabel("resonance frequency /Hz")
 
-            axs[1].add_artist(AnchoredText("Level:\n"+r"$\mu$="+"{:2.2f}dB{}\n".format(lMean, "FS"*writeFs+" ") +
-                                           r"$\sigma$="+"{0:2.2f}dB{1}".format(lStd, "FS"*writeFs+" "), loc="lower right"))
+            axs[1].add_artist(AnchoredText("Level:\n"+r"$\mu$="+"{:2.2f}dB{}\n".format(lMean, "FS"*args.fullScale+" ") +
+                                           r"$\sigma$="+"{0:2.2f}dB{1}".format(lStd, "FS"*args.fullScale+" "), loc="lower right"))
             plt.tight_layout()
             name = "TimeWin_{0:2.2f}ms_resWidth_{1:2.2f}Hz".format(
                 tWidth, args.resonanceWidth)
@@ -195,58 +195,36 @@ def analyze(args=defaults):
             plt.show()
 
     if args.verbose:
-        print("filename\t\twindowsize\t\tmax Level(Power)"
-              " /dB{}+{}\t\t dominant resonance frequency /Hz".format("FS"*writeFs+" ", args.calibrationOffset))
+        print("filename\t\t\twindowsize\t\tmax Level"
+              " /dB{}{}{}\t\t frequency /Hz".format("FS"*args.fullScale+" ", "+"*(args.calibrationOffset <= 0)+"-"*(args.calibrationOffset > 0), args.calibrationOffset))
         for p in levelData:
-            if writeFs:
+            if args.fullScale:
                 print(
                     "{0}\t\t{1}/s\t\t{2:2.2f}dBFS\t\t{3:4.3f}Hz".format(*p[:-1]))
             else:
                 print(
                     "{0}\t\t{1}/s\t\t{2:2.2f}dB\t\t{3:4.3f}Hz".format(*p[:-1]))
 
-        print("mean power across all soundfiles in the resonance frequency interval interval\nl\t={0:2.2f}±{1:2.2f}dB\nstd\t={2:2.2f}dB".format(
-            lMean, lStd/len(lev), lStd))
+        print("mean power across all soundfiles in the resonance frequency interval\nl\t={0:2.2f}±{1:2.2f}dB{2}\nstd\t={3:2.2f}dB{2}".format(
+            lMean, lStd/np.sqrt(len(lev)), "FS"*args.fullScale+" ", lStd))
+
+        print("data read as {}".format(set(dataDtypes)))
+        if len(set(dataDtypes)) > 1:
+            print("Warning: data is not stored in a consitent bit depth")
 
         # calculate the level in units of dB
 
     # plot everything individually
         if args.individual:
             for p in levelData:
-                if args.individual_UnitsOfLevel == None:
-                    levelUnit = "level/dB{}+{}".format("FS" *
-                                                       writeFs+" ", args.calibrationOffset)
-                else:
-                    levelUnit = args.individual_UnitsOfLevel
-                fig, [ax0, ax1] = plt.subplots(2, 1, sharey=True,)
-                rule = (f < args.individual_fLim[1]) & (
-                    f > args.individual_fLim[0])
-                # *2 because powspec is hermitian and only positive frequencies are plottet
-                ax1.plot(
-                    f[rule], 10 * np.log10([l/refVal for l in powSpec[rule]])+args.calibrationOffset)
-                ax1.set_xlabel("frequency/Hz")
-                ax1.set_ylabel(levelUnit)
-                ax1.set_title("average level")
-                ax1.yaxis.set_major_locator(
-                    ticker.MultipleLocator(20))
-                ax1.grid(axis="y", linestyle="--")
-
-                ax0.plot(tStartRange, p[5],)
-                ax0.set_ylabel(levelUnit)
-                ax0.set_xlabel("time/s")
-                ax0.set_title("power in {0:3.0f}Hz resonance frequency interval".format(
-                    args.resonanceWidth))
-                ax0.grid(axis="y", linestyle="--")
-
-                if args.individual_title != None:
-                    fig.suptitle(args.individual_title.format(file))
-                plt.tight_layout()
+                plt.plot(p[-1])
+                plt.suptitle("mean-maximum level={0:2.2f}".format(lMean-p[2]))
                 plt.savefig(args.target.format(
                     "individual"+"_"+Path(p[0]).stem))
 
     res = {"fileName": [d[0] for d in levelData],
            "tWidth": [d[1] for d in levelData],
-           "max/dB{}".format("FS"*writeFs+""*(not writeFs)): [d[2] for d in levelData],
+           "max/dB{}".format("FS"*args.fullScale+""*(not args.fullScale)): [d[2] for d in levelData],
            "fRes": [d[3] for d in levelData],
            "fullScaleMaxVal": [d[4] for d in levelData],
            "leveldB": [d[5] for d in levelData],
@@ -262,7 +240,10 @@ def analyze(args=defaults):
     # return levelData
     return res
 
+# %%
+
 
 if __name__ == "__main__":
     # show an example of how this works
+    Path(defaultSettings.target).parent.mkdir(exist_ok=True)
     dat = analyze(defaultSettings)
