@@ -21,6 +21,13 @@ AUTHOR: max scharf 04.01.2023 CEST 2023 maximilian.scharfatuol.de
 LICENSE: GNU GPLv3 
 """
 
+publishedReference={
+    #from Scharf et. al. 2024
+    "0.33l_vichy":{"level":92.8,#dB SPL
+                   "uncert":1.6#dB SPL stdev. (uncertainty on the empirical level)
+                   },
+    }
+
 if __name__ == "__main__":
     def boolToText(inp):
         if inp:
@@ -57,6 +64,8 @@ if __name__ == "__main__":
                         help="permitted frequency range for resonance frequency. default={}".format(
                             fRes),
                         type=float)
+    parser.add_argument("-bt", "--bottleType", 
+                        help="bottle-whistle type. default={}".format(next(iter(publishedReference))),default=next(iter(publishedReference)))
     # hide some settings from the user
     args = parser.parse_args()
     args.calibrationOffset = 0
@@ -65,6 +74,8 @@ if __name__ == "__main__":
     args.target = None
     args.breakOnError = False
     args.plot = False
+    args.empiricalLevel=publishedReference[args.bottleType]["level"]
+    args.empiricalLevelStd=publishedReference[args.bottleType]["uncert"]
 
     try:
         dat = lm.analyze(args)
@@ -93,13 +104,13 @@ if __name__ == "__main__":
         level = np.mean(levelList)
         num = len(levelList)
 
-        """3 dB as empirical variance/sqrt of independent measurements 
-        +0.5 dB calibration uncertainty of original levelmeter
+        """3.0dB as empirical variance/sqrt of independent measurements 
+        +xdB uncertainty of the empirical value for the level of the bottle in dB SPL
         independent uncertainties add quadratically"""
-        levelStd = np.sqrt(3**2/num+0.5**2)
+        levelStd = np.sqrt(3**2/num+args.empiricalLevelStd**2)
 
-        print("\nresults:\n\t{0} independent measurements assumed\n\tcalibration offset\t\t={1:2.2f} dB\n\testimated standard deviation\t={2:2.2f} dB".format(
-            num, 92.79-level, levelStd))
+        print("\nresults:\n\t{0} independent measurement{3} assumed\n\tcalibration offset\t\t\t\t={1:2.2f}dB\n\testimated standard deviation\t={2:2.2f}dB".format(
+            num, args.empiricalLevel-level, levelStd,"s"*(num>1)))
     else:
         print("\n No valid soundfiles")
         sys.exit(0)
