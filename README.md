@@ -24,3 +24,5 @@ Get help with:
 
 Working principle:
 ![plot](./workingPrinciple.png)
+
+See:DOI:10.1080/14992027.2024.2395416.
