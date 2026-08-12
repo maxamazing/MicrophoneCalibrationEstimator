@@ -5,17 +5,19 @@ import numpy as np
 import levelMeterBottle as lm
 from pathlib import Path
 import sys
-descr = """A Levelmeter for the calibration of mobile devices with a helmholz resonator
+descr = """A Levelmeter for the calibration of mobile devices with a Helmholtz resonator
 
 USER TOOL:
 
-    provide one or more recordings of different people blowing on the same type of beer bottle
-    with the same recording device at 50cm/ one armlength distance. The should be 3 long
+    Provide one or more recordings of different people blowing on the same type of beer bottle
+    with the same recording device at 50cm/ one arm length distance. There should be 3 long
     and continuous sounds of the resonating bottle at the fundamental frequency.
 
-    The tool will produce an estimate of the calibration offset to transform the recoded levels
+    The tool will produce an estimate of the calibration offset to transform the recorded levels
     to dB SPL. This offset has to be added to the recorded level in dB to yield dB SPL. An estimate
-    of the uncertainty is also produced as standard deviation.
+    of the uncertainty is also produced as a standard deviation.
+
+    See DOI: 10.1080/14992027.2024.2395416.
 
 AUTHOR: max scharf 04.01.2023 CEST 2023 maximilian.scharfatuol.de
 LICENSE: GNU GPLv3 
