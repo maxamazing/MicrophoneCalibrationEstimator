@@ -25,4 +25,4 @@ Get help with:
 Working principle:
 ![plot](./workingPrinciple.png)
 
-See:[DOI:10.1080/14992027.2024.2395416](https://doi.org/10.1080/14992027.2024.2395416)
+See: [DOI:10.1080/14992027.2024.2395416](https://doi.org/10.1080/14992027.2024.2395416)
